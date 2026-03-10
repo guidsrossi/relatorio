@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Tutoria</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f4f6f8;
+      color: #222;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 26px;
+      text-align: center;
+    }
+
+    .descricao {
+      text-align: center;
+      color: #555;
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #cfd6dd;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    button {
+      background: #1565c0;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #0d47a1;
+    }
+
+    .resultado {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .sucesso {
+      background: #e8f5e9;
+      color: #1b5e20;
+      border: 1px solid #a5d6a7;
+    }
+
+    .erro {
+      background: #ffebee;
+      color: #b71c1c;
+      border: 1px solid #ef9a9a;
+    }
+
+    .loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    @media (max-width: 700px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="cardFormulario">
+      <h1>Relatório de Tutoria</h1>
+      <p class="descricao">Preencha os dados para gerar o PDF.</p>
+
+      <form id="formRelatorio">
+        <div class="grid">
+          <div class="full">
+            <label for="nomeCompleto">Nome completo</label>
+            <input type="text" id="nomeCompleto" required />
+          </div>
+
+          <div>
+            <label for="turma">Turma</label>
+            <select id="turma" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="dataOcorrencia">Data da ocorrência</label>
+            <input type="date" id="dataOcorrencia" required />
+          </div>
+
+          <div>
+            <label for="horaOcorrencia">Hora da ocorrência</label>
+            <input type="time" id="horaOcorrencia" required />
+          </div>
+
+          <div>
+            <label for="localOcorrencia">Local da ocorrência</label>
+            <input type="text" id="localOcorrencia" required />
+          </div>
+
+          <div class="full">
+            <label for="descricao">Descrição da ocorrência</label>
+            <textarea id="descricao" required></textarea>
+          </div>
+
+          <div class="full">
+            <label for="categoria">Categoria</label>
+            <select id="categoria" required>
+              <option value="">Carregando...</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="envolvido1">Outro estudante envolvido 1</label>
+            <input type="text" id="envolvido1" />
+          </div>
+
+          <div>
+            <label for="envolvido2">Outro estudante envolvido 2</label>
+            <input type="text" id="envolvido2" />
+          </div>
+
+          <div class="full">
+            <label for="envolvido3">Outro estudante envolvido 3</label>
+            <input type="text" id="envolvido3" />
+          </div>
+
+          <div>
+            <label for="responsavel">Responsável pela ocorrência</label>
+            <input type="text" id="responsavel" required />
+          </div>
+
+          <div>
+            <label for="cargo">Cargo</label>
+            <input type="text" id="cargo" required />
+          </div>
+
+          <div class="full">
+            <button type="submit">Gerar PDF</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="resultado" class="resultado"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwJyGTIVcjuZnPkS_z_JqoO8inhX4lzdqxTVv4HUi-ET_Z4K-uckUvv7F0Z1hzo8VG80g/exec';
+
+    const form = document.getElementById('formRelatorio');
+    const resultado = document.getElementById('resultado');
+    const cardFormulario = document.getElementById('cardFormulario');
+    const selectCategoria = document.getElementById('categoria');
+    const selectTurma = document.getElementById('turma');
+
+    function mostrarMensagem(tipo, texto) {
+      resultado.style.display = 'block';
+      resultado.className = 'resultado ' + tipo;
+      resultado.innerHTML = texto;
+    }
+
+    async function carregarDadosIniciais() {
+      try {
+        const response = await fetch(`${API_URL}?acao=init`);
+        const data = await response.json();
+
+        if (!data.sucesso) {
+          throw new Error(data.erro || 'Erro ao carregar dados iniciais.');
+        }
+
+        selectTurma.innerHTML = '<option value="">Selecione</option>';
+        data.turmas.forEach((turma) => {
+          const option = document.createElement('option');
+          option.value = turma;
+          option.textContent = turma;
+          selectTurma.appendChild(option);
+        });
+
+        selectCategoria.innerHTML = '<option value="">Selecione</option>';
+        data.categorias.forEach((categoria) => {
+          const option = document.createElement('option');
+          option.value = categoria;
+          option.textContent = categoria;
+          selectCategoria.appendChild(option);
+        });
+      } catch (error) {
+        selectTurma.innerHTML = '<option value="">Erro ao carregar</option>';
+        selectCategoria.innerHTML = '<option value="">Erro ao carregar</option>';
+        mostrarMensagem('erro', error.message || 'Erro ao carregar dados.');
+      }
+    }
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const dados = {
+        nomeCompleto: document.getElementById('nomeCompleto').value,
+        turma: document.getElementById('turma').value,
+        dataOcorrencia: document.getElementById('dataOcorrencia').value,
+        horaOcorrencia: document.getElementById('horaOcorrencia').value,
+        localOcorrencia: document.getElementById('localOcorrencia').value,
+        descricao: document.getElementById('descricao').value,
+        categoria: document.getElementById('categoria').value,
+        envolvido1: document.getElementById('envolvido1').value,
+        envolvido2: document.getElementById('envolvido2').value,
+        envolvido3: document.getElementById('envolvido3').value,
+        responsavel: document.getElementById('responsavel').value,
+        cargo: document.getElementById('cargo').value
+      };
+
+      try {
+        cardFormulario.classList.add('loading');
+        mostrarMensagem('sucesso', 'Gerando PDF...');
+
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({ dados })
+        });
+
+        const data = await response.json();
+
+        if (!data.sucesso) {
+          throw new Error(data.erro || 'Erro ao gerar relatório.');
+        }
+
+        mostrarMensagem(
+          'sucesso',
+          'PDF gerado com sucesso.<br><br>' +
+          'ID: <strong>' + data.id + '</strong><br>' +
+          '<a href="' + data.pdfUrl + '" target="_blank">Abrir PDF</a>'
+        );
+
+        form.reset();
+      } catch (error) {
+        mostrarMensagem('erro', error.message || 'Erro ao gerar PDF.');
+      } finally {
+        cardFormulario.classList.remove('loading');
+      }
+    });
+
+    carregarDadosIniciais();
+  </script>
+</body>
+</html>
